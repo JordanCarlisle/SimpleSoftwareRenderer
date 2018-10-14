@@ -1,0 +1,52 @@
+#include "SDLWindow.h"
+
+
+SDLWindow::SDLWindow(unsigned int width, unsigned int height)
+	: m_width(width), m_height(height), m_initialised(false), IWindow(width, height)
+{}
+
+SDLWindow::~SDLWindow()
+{
+	destroy();
+}
+
+SDL_Window* SDLWindow::getContext()
+{
+	return m_window;
+}
+
+void SDLWindow::init()
+{
+	//no multiple initialisation
+	if (m_initialised) return;
+	m_initialised = true;
+
+	//Creates a mew SDL2 window
+	m_window = SDL_CreateWindow("SDL Window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_width, m_height, SDL_WINDOW_SHOWN);
+}
+
+void SDLWindow::update()
+{
+	SDL_PollEvent(&m_event);
+
+	switch (m_event.type)
+	{
+	case SDL_QUIT:
+		destroy();
+		break;
+	}
+}
+
+void SDLWindow::destroy()
+{
+	if (!m_initialised) return;
+	m_initialised = false;
+
+	//Destroys the SDL2 window
+	SDL_DestroyWindow(m_window);
+}
+
+bool SDLWindow::running()
+{
+	return m_initialised;
+}
