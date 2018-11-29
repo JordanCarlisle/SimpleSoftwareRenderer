@@ -1,17 +1,31 @@
 #pragma once
 
 template <typename T>
-FrameBuffer<T>::FrameBuffer(unsigned int bufferWidth, unsigned int bufferHeight)
+FrameBuffer<T>::FrameBuffer(unsigned int bufferWidth, unsigned int bufferHeight, unsigned int flags)
 	: m_bufferWidth(bufferWidth), m_bufferHeight(bufferHeight)
 {
-	m_buffer = new T[bufferWidth * bufferHeight];
+	m_flags = flags;
+	if (m_flags & kFrameBufferFlag_Allocate)
+	{
+		m_buffer = new T[bufferWidth * bufferHeight];
+	}
 }
 
 template <typename T>
 FrameBuffer<T>::~FrameBuffer()
 {
-	delete[] m_buffer;
+	if (m_flags & kFrameBufferFlag_Allocate)
+	{
+		delete[] m_buffer;
+	}
 }
+
+template <typename T>
+void FrameBuffer<T>::setPixelBuffer(void* pixelBuffer)
+{
+	m_buffer = (T*)pixelBuffer;
+}
+
 
 template <typename T>
 inline unsigned int FrameBuffer<T>::width()

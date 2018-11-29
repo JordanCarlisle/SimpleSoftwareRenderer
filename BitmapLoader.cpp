@@ -3,14 +3,8 @@
 #include <fstream>
 #include <iostream>
 
-BitmapLoader::BitmapLoader()
-{
-}
-
-
-BitmapLoader::~BitmapLoader()
-{
-}
+BitmapLoader::BitmapLoader() {}
+BitmapLoader::~BitmapLoader() {}
 
 void BitmapLoader::load(const char* filename, texture* tex)
 {
@@ -19,50 +13,45 @@ void BitmapLoader::load(const char* filename, texture* tex)
 
 	if (file.is_open())
 	{
-
 		unsigned char* headerBuffers[2] = { nullptr, nullptr };
-
 		unsigned char* pixels = nullptr;
 
-		BITMAPFILEHEADER* header = nullptr;
-		BITMAPINFOHEADER* info = nullptr;
+		headerBuffers[0] = new unsigned char[sizeof(BitmapFileHeader)];
+		headerBuffers[1] = new unsigned char[sizeof(BitmapInfoHeader)];
 
-		headerBuffers[0] = new unsigned char[sizeof(BITMAPFILEHEADER)];
-		headerBuffers[1] = new unsigned char[sizeof(BITMAPINFOHEADER)];
+		file.read((char*)headerBuffers[0], sizeof(BitmapFileHeader));
+		file.read((char*)headerBuffers[1], sizeof(BitmapInfoHeader));
 
-		file.read((char*)headerBuffers[0], sizeof(BITMAPFILEHEADER));
-		file.read((char*)headerBuffers[1], sizeof(BITMAPINFOHEADER));
+		BitmapFileHeader* header = (BitmapFileHeader*)headerBuffers[0];
+		BitmapInfoHeader* info = (BitmapInfoHeader*)headerBuffers[1];
 
-		header = (BITMAPFILEHEADER*)headerBuffers[0];
-		info = (BITMAPINFOHEADER*)headerBuffers[1];
+		std::cout << "Loading bitmap: " << info->width << " x " << info->height << std::endl;
 
-		std::cout << info->biWidth << " x " << info->biHeight << std::endl;
-
-		if (header->bfType == 0x4D42)
+		if (header->type == 0x4D42)
 		{
-			pixels = new unsigned char[info->biSizeImage];
+			pixels = new unsigned char[info->sizeImage];
 
-			file.seekg(header->bfOffBits);
-			file.read((char*)pixels, info->biSizeImage);
+			file.seekg(header->offBits);
+			file.read((char*)pixels, info->sizeImage);
 
-			int n = info->biWidth * info->biHeight;
+			int n = info->width * info->height;
 			rgba32* texturePixels = new rgba32[n];
 			
-			for (unsigned long i = 0; i < info->biHeight; i++)
+			for (unsigned long i = 0; i < info->height; i++)
 			{
 				unsigned long k = 0;
-				for (unsigned long j = 0; j < info->biWidth*3; j +=3 )
+				for (unsigned long j = 0; j < info->width*3; j +=3 )
 				{
-					unsigned long yoff = i * info->biWidth;
-					unsigned long ioff = (info->biWidth * info->biHeight) - ((i+1) * info->biWidth);
+					unsigned long yoff = i * info->width;
+					unsigned long ioff = (info->width * info->height) - ((i+1) * info->width);
 					texturePixels[yoff + k] = rgba32((char)pixels[ioff *3 + j + 2], (char)pixels[ioff *3 +j + 1], (char)pixels[ioff *3 + j], (char)255);
 					k++;
 				}
 			}
 
 			tex->pixels = texturePixels;
-			tex->height = info->biHeight;
-			tex->width = info->biWidth;
+			tex->height = info->height;
+			tex->width = info->width;
 		}
 		else
 		{

@@ -1,5 +1,5 @@
 #include "SDLWindow.h"
-
+#include <stdio.h>
 
 SDLWindow::SDLWindow(unsigned int width, unsigned int height)
 	: m_width(width), m_height(height), m_initialised(false), IWindow(width, height)
@@ -21,8 +21,12 @@ void SDLWindow::init()
 	if (m_initialised) return;
 	m_initialised = true;
 
+	m_msf = 0;
+
+	m_lastTime = SDL_GetTicks();
+
 	//Creates a mew SDL2 window
-	m_window = SDL_CreateWindow("Soft Engine", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_width, m_height, SDL_WINDOW_SHOWN);
+	m_window = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_width, m_height, SDL_WINDOW_SHOWN);
 }
 
 void SDLWindow::update()
@@ -35,6 +39,15 @@ void SDLWindow::update()
 		destroy();
 		break;
 	}
+
+	unsigned int timeNow = SDL_GetTicks();
+	unsigned int deltaTime = timeNow - m_lastTime;
+	m_lastTime = SDL_GetTicks();
+	m_msf = (float)deltaTime / 1000.0f;
+
+	sprintf(m_title, "Software Renderer - %d ms/frame", deltaTime);
+	SDL_SetWindowTitle(m_window, m_title);
+
 }
 
 void SDLWindow::destroy()
@@ -42,11 +55,15 @@ void SDLWindow::destroy()
 	if (!m_initialised) return;
 	m_initialised = false;
 
-	//Destroys the SDL2 window
 	SDL_DestroyWindow(m_window);
 }
 
 bool SDLWindow::running()
 {
 	return m_initialised;
+}
+
+float SDLWindow::getFrameTime()
+{
+	return m_msf;
 }

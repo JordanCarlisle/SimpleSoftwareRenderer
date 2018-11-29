@@ -5,9 +5,10 @@
 #include <array>
 #include <algorithm>
 
-GraphicsDevice::GraphicsDevice(SDLWindow& window) : m_backBuffer(1024, 768), m_depthBuffer(1024, 768)
+GraphicsDevice::GraphicsDevice(SDLWindow& window) 
+	: m_backBuffer(1024, 768, 0)
+	, m_depthBuffer(1024, 768, kFrameBufferFlag_Allocate)
 {
-	
 	m_GraphicsDevice = SDL_CreateRenderer(window.getContext(), -1, SDL_RENDERER_ACCELERATED);
 	m_swRenderTarget = SDL_CreateTexture(m_GraphicsDevice, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, m_backBuffer.width(), m_backBuffer.height());
 	SDL_SetRenderTarget(m_GraphicsDevice, m_swRenderTarget);
@@ -21,6 +22,15 @@ GraphicsDevice::~GraphicsDevice()
 
 void GraphicsDevice::clear()
 {
+	SDL_Rect texRect = { 0, 0, m_backBuffer.width(), m_backBuffer.height() };
+
+	void* pixels;
+	int pitch;
+
+	SDL_LockTexture(m_swRenderTarget, &texRect, &pixels, &pitch);
+
+	m_backBuffer.setPixelBuffer(pixels);
+
 	rgba32 colour(
 		(char)255,
 		(char)0,
@@ -39,13 +49,12 @@ void GraphicsDevice::drawPoint(const v2& pos, const v4& colour)
 		(char)(colour.z * 255.0f),
 		(char)(colour.w * 255.0f)
 	);
-	stall();
+
 	m_backBuffer.put((unsigned int)pos.x, (unsigned int)pos.y, rgba);
 }
 
 void GraphicsDevice::drawLine(const v2& pos1, const v2& pos2, const v4& colour)
 {
-
 	rgba32 rgba(
 		(char)(colour.x * 255.0f),
 		(char)(colour.y * 255.0f),
@@ -119,73 +128,8 @@ void GraphicsDevice::drawTriangle(const v2& pos1, const v2& pos2, const v2& pos3
 	drawLine(pos3, pos1, colour);
 }
 
-void GraphicsDevice::drawFillTriangle(const v3& pos1, const v3& pos2, const v3& pos3, const v4& colour, const v4& colour2, const v4& colour3, const texture& tex, const v2& texcoord1, const v2& texcoord2, const v2& texcoord3)
+void GraphicsDevice::drawFillTriangle(const v3& pos1, const v3& pos2, const v3& pos3, const v4& colour, const v4& colour2, const v4& colour3, const v2& texcoord1, const v2& texcoord2, const v2& texcoord3, texture* tex)
 {
-	
-
-/*	std::array<v2, 3> v = {
-		pos1,
-		pos2,
-		pos3
-	};
-
-	std::sort(v.begin(), v.end(), [](const v2& v1, const v2& v2){
-		return v1.y < v2.y;
-	});
-	
-	float f = (v[1].y - v[0].y) / (v[2].y - v[0].y);
-
-	v2 p(v[0].x + f * (v[2].x - v[0].x), v[1].y);
-
-	auto bottomTri = [&]() {
-
-		float inv1 = maths::invgrad(v[2], v[1]);
-		float inv2 = maths::invgrad(v[2], p);
-
-		v2 from = v[2],
-			to = v[2];
-
-		for (float y = v[2].y; y > v[1].y; y--)
-		{
-			from.y = y;
-			to.y = y;
-			drawLine(from, to, colour);
-
-			from.x -= inv1;
-			to.x -= inv2;
-		}
-
-	};
-
-	auto topTri = [&]() {
-		
-		float inv1 = maths::invgrad(v[0], v[1]);
-		float inv2 = maths::invgrad(v[0], p);
-
-		v2 from = v[0], 
-			to = v[0];
-
-		for (float y = v[0].y; y <= v[1].y; y++)
-		{
-			from.y = y;
-			to.y = y;
-			drawLine(from, to, colour);
-
-			from.x += inv1;
-			to.x += inv2;
-		}
-	};
-
-	if (v[0].y == v[1].y)
-		bottomTri();
-	else if (v[1].y == v[2].y)
-		topTri();
-	else
-	{
-		topTri();
-		bottomTri();
-	}*/
-
 	rect bb;
 	bb.x = std::fmin(pos1.x, std::fmin(pos2.x, pos3.x));
 	bb.y = std::fmin(pos1.y, std::fmin(pos2.y, pos3.y));
@@ -221,16 +165,26 @@ void GraphicsDevice::drawFillTriangle(const v3& pos1, const v3& pos2, const v3& 
 					finalColour.y = (colour.y * uvw.x) + (colour2.y * uvw.y) + (colour3.y * uvw.z);
 					finalColour.z = (colour.z * uvw.x) + (colour2.z * uvw.y) + (colour3.z * uvw.z);
 					
-					v2 uv = texcoord1 * uvw.x + texcoord2 * uvw.y + texcoord3 * uvw.z;
+					if (tex != nullptr)
+					{
+						v2 uv = texcoord1 * uvw.x + texcoord2 * uvw.y + texcoord3 * uvw.z;
 
-					unsigned int w = uv.x * tex.width;
-					unsigned int h = uv.y * tex.height;
+						// wrap uv coordinates
+						if (uv.x < 0.0f) uv.x = 1.0f - uv.x;
+						if (uv.x > 1.0f) uv.x -= -1.0f;
+						if (uv.y < 0.0f) uv.y = 1.0f - uv.y;
+						if (uv.y > 1.0f) uv.y -= 1.0f;
 
-					rgba32 pixelCol = tex.pixels[h * tex.width + w];
+						//sample the texture
+						unsigned int w = uv.x * tex->width;
+						unsigned int h = uv.y * tex->height;
 
-					finalColour.x *= (float)pixelCol.r / 255.0f;
-					finalColour.y *= (float)pixelCol.g / 255.0f;
-					finalColour.z *= (float)pixelCol.b / 255.0f;
+						rgba32 pixelCol = tex->pixels[h * tex->width + w];
+
+						finalColour.x *= (float)pixelCol.r / 255.0f;
+						finalColour.y *= (float)pixelCol.g / 255.0f;
+						finalColour.z *= (float)pixelCol.b / 255.0f;
+					}
 					
 					rgba.r = (unsigned char)(finalColour.x * 255.0f);
 					rgba.g = (unsigned char)(finalColour.y * 255.0f);
@@ -242,8 +196,6 @@ void GraphicsDevice::drawFillTriangle(const v3& pos1, const v3& pos2, const v3& 
 			}
 		}
 	}
-
-
 }
 
 void GraphicsDevice::drawCircle(const v2& pos, float radius, const v4& colour)
@@ -331,16 +283,6 @@ void GraphicsDevice::drawFillCircle(const v2& pos, float radius, const v4& colou
 	}
 }
 
-void GraphicsDevice::drawRect(const rect& bounds, const v4& colour)
-{
-
-}
-
-void GraphicsDevice::drawFillRect(const rect& bounds, const v4& colour)
-{
-
-}
-
 void GraphicsDevice::blitTexture(const texture& tex, const v2& pos)
 {
 	int max = (int)pos.x + tex.width;
@@ -362,31 +304,8 @@ void GraphicsDevice::blitTexture(const texture& tex, const v2& pos)
 
 void GraphicsDevice::present()
 {
-	SDL_Rect texRect = { 0, 0, m_backBuffer.width(), m_backBuffer.height() };
-
-	void* pixels;
-	int pitch;
-
-	SDL_LockTexture(m_swRenderTarget, &texRect, &pixels, &pitch);
-	memcpy(pixels, m_backBuffer.getBuffer(), pitch * m_backBuffer.height());
 	SDL_UnlockTexture(m_swRenderTarget);
 
 	SDL_RenderCopy(m_GraphicsDevice, m_swRenderTarget, NULL, NULL);
 	SDL_RenderPresent(m_GraphicsDevice);
-}
-
-void GraphicsDevice::stall()
-{
-//	present();
-/*	for (unsigned int i = 0; i < m_backBuffer.width(); i++)
-	{
-
-			rgba32 colour = m_backBuffer.get(i, 0);
-
-			SDL_SetRenderDrawColor(m_GraphicsDevice, colour.r, colour.g, colour.b, colour.a);
-		//	SDL_RenderDrawPoint(m_GraphicsDevice, 0, 0);
-
-	}*/
-	
-//	std::cout << "stall" << std::endl;
 }

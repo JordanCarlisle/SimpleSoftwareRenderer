@@ -16,6 +16,7 @@ public:
 	void update() override;
 	void destroy() override;
 	bool running() override;
+	float getFrameTime();
 
 private:
 
@@ -23,11 +24,16 @@ private:
 	unsigned int m_width;
 	unsigned int m_height;
 
+	//title
+	char m_title[128];
+	float m_msf;
+	unsigned int m_lastTime;
+
 	//SDL objects and pointers
 	SDL_Window* m_window;
 	SDL_Event m_event;
 
-	//initialisation private member
+	//initialisation
 	bool m_initialised;
 
 };

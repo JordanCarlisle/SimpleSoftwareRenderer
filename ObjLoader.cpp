@@ -5,14 +5,8 @@
 #include <iostream>
 #include <algorithm>
 
-ObjLoader::ObjLoader()
-{
-}
-
-
-ObjLoader::~ObjLoader()
-{
-}
+ObjLoader::ObjLoader() {}
+ObjLoader::~ObjLoader() {}
 
 
 void ObjLoader::load(const char* filename, mesh* loadTo)
@@ -103,37 +97,41 @@ void ObjLoader::parse(const std::string& line)
 
 	if (tokens[0] == "v ")
 	{
-		m_mesh->vertices.push_back(
-			v3(
-				std::stof(tokens[1]),
-				std::stof(tokens[2]),
-				std::stof(tokens[3])
-			)
+		v3 vertex(
+			std::stof(tokens[1]),
+			std::stof(tokens[2]),
+			std::stof(tokens[3])
 		);
-	}
 
-	if (tokens[0] == "vt ")
+		vertex.y *= -1;
+
+		m_mesh->vertices.push_back(vertex);
+	}
+	else if (tokens[0] == "vt ")
 	{
-		m_mesh->texCoords.push_back(
-			v2(
-				std::stof(tokens[1]),
-				std::stof(tokens[2])
-			)
+		//wrap uv on import
+		v2 uv(
+			std::stof(tokens[1]),
+			std::stof(tokens[2])
 		);
+		if (uv.x < 0.0f) uv.x = 1.0f - uv.x;
+		if (uv.x > 1.0f) uv.x -= -1.0f;
+		if (uv.y < 0.0f) uv.y = 1.0f - uv.y;
+		if (uv.y > 1.0f) uv.y -= 1.0f;
+		m_mesh->texCoords.push_back(uv);
 	}
-
-	if (tokens[0] == "vn ")
+	else if (tokens[0] == "vn ")
 	{
-		m_mesh->normals.push_back(
-			v3(
-				std::stof(tokens[1]),
-				std::stof(tokens[2]),
-				std::stof(tokens[3])
-			)
+		v3 normal(
+			std::stof(tokens[1]),
+			std::stof(tokens[2]),
+			std::stof(tokens[3])
 		);
-	}
+		normal.y *= -1;
 
-	if (tokens[0] == "f ")
+		m_mesh->normals.push_back(normal);
+	}
+	else if (tokens[0] == "f ")
 	{
 		std::vector<std::string> ftok1, ftok2, ftok3;
 		splitLine(tokens[1], ftok1, '/');

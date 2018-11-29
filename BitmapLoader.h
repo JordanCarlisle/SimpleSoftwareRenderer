@@ -1,6 +1,7 @@
 #pragma once
 #include "texture.h"
 
+#pragma pack(push, 1)
 struct BitmapFileHeader
 {
 	unsigned short type;
@@ -9,7 +10,9 @@ struct BitmapFileHeader
 	unsigned short reserved2;
 	unsigned long offBits;
 };
+#pragma pack(pop)
 
+#pragma pack(push, 1)
 struct BitmapInfoHeader
 {
 	unsigned long size;
@@ -24,6 +27,7 @@ struct BitmapInfoHeader
 	unsigned long clrUsed;
 	unsigned long clrImportant;
 };
+#pragma pack(pop)
 
 class BitmapLoader
 {
