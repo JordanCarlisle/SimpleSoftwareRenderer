@@ -33,8 +33,8 @@ void GraphicsDevice::clear()
 
 	rgba32 colour(
 		(char)255,
-		(char)0,
-		(char)0,
+		(char)255,
+		(char)255,
 		(char)255
 	);
 	m_backBuffer.fill(colour);

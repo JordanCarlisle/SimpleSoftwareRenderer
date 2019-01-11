@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
 	ObjLoader obj;
 	obj.load("sample.obj", &model.meshData);
 
-	v2 offset(700.5f, 300.0f);
+	v2 offset(500.5f, 400.0f);
 	v3 angle(0.0f, 0.0f, 0.0f);
 	v3 lightAngle(0.0f, -PI /2, PI);
 
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
 	int lastMouseState[2];
 	SDL_GetGlobalMouseState(&lastMouseState[0], &lastMouseState[1]);
 
-	unsigned int viewMode = kViewModeWireFrame;
+	unsigned int viewMode = kViewModeTextured;
 	bool viewModeToggle = false;
 
 	double dt = 0.0f;
@@ -59,6 +59,7 @@ int main(int argc, char* argv[])
 		SDL_Scancode q = SDL_GetScancodeFromName("Q");
 		SDL_Scancode keyM = SDL_GetScancodeFromName("M");
 		SDL_Scancode keyN = SDL_GetScancodeFromName("N");
+		SDL_Scancode keyB = SDL_GetScancodeFromName("B");
 
 		int currentMouseState[2];
 		Uint32 mouseButtonState = SDL_GetGlobalMouseState(&currentMouseState[0], &currentMouseState[1]);
@@ -71,6 +72,12 @@ int main(int argc, char* argv[])
 		lastMouseState[1] = currentMouseState[1];
 
 		
+		if (keyState[keyB])
+		{
+			angle.y -= 100 * dt;
+			lightAngle.x = (angle.y - 45) * PI / 180;
+		}
+
 		if (mouseButtonState & SDL_BUTTON_LMASK)
 		{
 			angle.x += (float)mouseDelta[1] * 30 * dt;
@@ -147,7 +154,7 @@ int main(int argc, char* argv[])
 				p2 = model.matrix * p2;
 				p3 = model.matrix * p3;
 
-				renderer.drawTriangle(v2(p1.x, p1.y), v2(p2.x, p2.y), v2(p3.x, p3.y), v4(1, 1, 1, 1));
+				renderer.drawTriangle(v2(p1.x, p1.y), v2(p2.x, p2.y), v2(p3.x, p3.y), v4(0, 0, 0, 1));
 			}
 		}
 		else if (viewMode == kViewModeFlat)
@@ -169,7 +176,7 @@ int main(int argc, char* argv[])
 				norm.normalize();
 
 				float lightFactor = norm.dot(lightDir);
-				lightFactor = (lightFactor < 0.0f) ? 0.0f : lightFactor;
+				lightFactor = (lightFactor < 0.4f) ? 0.4f : lightFactor;
 
 				v4 colr(lightFactor, lightFactor, lightFactor, 1);
 				v2 tx;
@@ -205,13 +212,13 @@ int main(int argc, char* argv[])
 				p3 = model.matrix * p3;
 
 				float v1fac = norm1.dot(lightDir);
-				v1fac = (v1fac < 0.0f) ? 0.0f : v1fac;
+				v1fac = (v1fac < 0.4f) ? 0.4f : v1fac;
 
 				float v2fac = norm2.dot(lightDir);
-				v2fac = (v2fac < 0.0f) ? 0.0f : v2fac;
+				v2fac = (v2fac < 0.4f) ? 0.4f : v2fac;
 
 				float v3fac = norm3.dot(lightDir);
-				v3fac = (v3fac < 0.0f) ? 0.0f : v3fac;
+				v3fac = (v3fac < 0.4f) ? 0.4f : v3fac;
 
 				v3 colr = v3(1.0f, 1.0f, 1.0f) * v1fac;
 				v3 colg = v3(1.0f, 1.0f, 1.0f) * v2fac;
